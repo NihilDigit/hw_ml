@@ -1,0 +1,17 @@
+[workspace]
+authors = ["nihildigit <nihildigit@outlook.com>"]
+channels = ["conda-forge"]
+name = "hw_ml"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = "3.11"
+numpy = "*"
+pandas = "*"
+scipy = "*"
+scikit-learn = "*"
+matplotlib = "*"
+scienceplots = "*"
