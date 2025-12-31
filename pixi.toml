@@ -7,11 +7,18 @@ version = "0.1.0"
 
 [tasks]
 
+[system-requirements]
+cuda = "13.0"
+
 [dependencies]
-python = "3.11"
+python = "3.11.*"
+pytorch-gpu = "2.9.*"
+torchvision = "0.24.*"
 numpy = "*"
 pandas = "*"
 scipy = "*"
 scikit-learn = "*"
 matplotlib = "*"
 scienceplots = "*"
+tqdm = "*"
+
