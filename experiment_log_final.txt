@@ -6,15 +6,17 @@ CUDA Version: 12.9
 Loading data from /home/spencer/Codes/openspec_projects/hw_ml/data/raw/Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv...
 Loaded 328181 samples with 2 classes
 Training samples: 262544, Test samples: 65637
+Sampling training set from 262544 to 50000...
+Training samples after sampling: 50000
 
 ============================================================
-Processing reducer: PCA
+Experiment 1/5: PCA-10D
 ============================================================
 
 --- Dimensions: 10 ---
-Reduced to shape: (262544, 10)
-Explained variance ratio: 0.9935
-Class separation ratio: 0.0056
+Reduced to shape: (50000, 10)
+Explained variance ratio: 0.9870
+Class separation ratio: 0.0055
 Generating 2D visualization...
 Saved plot to /home/spencer/Codes/openspec_projects/hw_ml/figures/PCA_10_2d.png
 

@@ -101,13 +101,33 @@ def main():
     )
     print(f"Training samples: {len(X_train)}, Test samples: {len(X_test)}")
 
+    # Sample training set to 50k for faster experimentation
+    if len(X_train) > 50000:
+        print(f"Sampling training set from {len(X_train)} to 50000...")
+        sample_idx = np.random.RandomState(RANDOM_SEED).choice(
+            len(X_train), size=50000, replace=False
+        )
+        X_train = X_train[sample_idx]
+        y_train = y_train[sample_idx]
+        print(f"Training samples after sampling: {len(X_train)}")
+
     # Normalization
     scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    reducers = ["PCA", "LDA", "t-SNE"]
-    dims = [10, 15, 20]
+    # Experiment design: 15 combinations
+    # PCA: 3 dimensions × 3 classifiers = 9 combinations
+    # LDA: 15 dimensions × 3 classifiers = 3 combinations
+    # t-SNE: 15 dimensions × 3 classifiers = 3 combinations
+    experiments = [
+        # PCA experiments (9 combinations)
+        ("PCA", 10), ("PCA", 15), ("PCA", 20),
+        # LDA experiments (3 combinations)
+        ("LDA", 15),
+        # t-SNE experiments (3 combinations)
+        ("t-SNE", 15),
+    ]
 
     # Classifier configurations
     # Note: SVM and RandomForest use scikit-learn (CPU multi-core)
@@ -145,12 +165,20 @@ def main():
 
     n_classes = len(np.unique(y))
 
-    for reducer_name in reducers:
+    # Track processed reducer combinations to avoid redundant computations
+    processed_reductions = {}
+
+    for exp_idx, (reducer_name, n_comp) in enumerate(experiments, 1):
         print(f"\n{'='*60}")
-        print(f"Processing reducer: {reducer_name}")
+        print(f"Experiment {exp_idx}/{len(experiments)}: {reducer_name}-{n_comp}D")
         print(f"{'='*60}")
 
-        for n_comp in dims:
+        # Use cached reduction if already computed
+        reduction_key = (reducer_name, n_comp)
+        if reduction_key in processed_reductions:
+            print(f"Using cached {reducer_name}-{n_comp}D reduction...")
+            X_train_red, X_test_red = processed_reductions[reduction_key]
+        else:
             print(f"\n--- Dimensions: {n_comp} ---")
 
             reducer = reducer_factory(reducer_name, n_comp, n_classes, device)
@@ -208,66 +236,69 @@ def main():
                 plot_2d_scatter(viz_df, LABEL_COL, plot_path)
                 print(f"Saved plot to {plot_path}")
 
-            # Train classifiers
-            for clf_name, clf_config in classifiers.items():
-                print(f"\nTraining {clf_name}...")
+            # Cache the reduction for reuse
+            processed_reductions[reduction_key] = (X_train_red, X_test_red)
 
-                start_train = time.time()
+        # Train classifiers on reduced data
+        for clf_name, clf_config in classifiers.items():
+            print(f"\nTraining {clf_name}...")
 
-                if clf_config["type"] == "sklearn":
-                    # Scikit-learn classifier with GridSearchCV
-                    search = GridSearchCV(
-                        clf_config["model"],
-                        clf_config["param_grid"],
-                        cv=3,
-                        scoring="f1_macro",
-                        n_jobs=-1,
-                        refit=True,
-                    )
-                    search.fit(X_train_red, y_train)
-                    best_params = search.best_params_
-                    model = search.best_estimator_
+            start_train = time.time()
 
-                elif clf_config["type"] == "torch":
-                    # PyTorch classifier with custom grid search
-                    model, best_params = grid_search_torch_lr(
-                        X_train_red,
-                        y_train,
-                        clf_config["param_grid"],
-                        cv=3,
-                        device=device,
-                    )
-
-                train_time = time.time() - start_train
-
-                # Prediction
-                start_pred = time.time()
-                y_pred = model.predict(X_test_red)
-                pred_time = time.time() - start_pred
-
-                # Metrics
-                acc = overall_accuracy(y_test, y_pred)
-                fpr, fnr = binary_rates_from_multiclass(y_test, y_pred)
-
-                print(
-                    f"  Accuracy: {acc:.4f}, FPR: {fpr:.4f}, FNR: {fnr:.4f}, "
-                    f"Train time: {train_time:.2f}s, Pred time: {pred_time:.4f}s"
+            if clf_config["type"] == "sklearn":
+                # Scikit-learn classifier with GridSearchCV
+                search = GridSearchCV(
+                    clf_config["model"],
+                    clf_config["param_grid"],
+                    cv=3,
+                    scoring="f1_macro",
+                    n_jobs=-1,
+                    refit=True,
                 )
-                print(f"  Best params: {best_params}")
+                search.fit(X_train_red, y_train)
+                best_params = search.best_params_
+                model = search.best_estimator_
 
-                metrics_rows.append(
-                    {
-                        "Reducer": reducer_name,
-                        "n_components": n_comp,
-                        "Classifier": clf_name,
-                        "Accuracy": acc,
-                        "FPR": fpr,
-                        "FNR": fnr,
-                        "Train_time_s": train_time,
-                        "Predict_time_s": pred_time,
-                        "Best_params": str(best_params),
-                    }
+            elif clf_config["type"] == "torch":
+                # PyTorch classifier with custom grid search
+                model, best_params = grid_search_torch_lr(
+                    X_train_red,
+                    y_train,
+                    clf_config["param_grid"],
+                    cv=3,
+                    device=device,
                 )
+
+            train_time = time.time() - start_train
+
+            # Prediction
+            start_pred = time.time()
+            y_pred = model.predict(X_test_red)
+            pred_time = time.time() - start_pred
+
+            # Metrics
+            acc = overall_accuracy(y_test, y_pred)
+            fpr, fnr = binary_rates_from_multiclass(y_test, y_pred)
+
+            print(
+                f"  Accuracy: {acc:.4f}, FPR: {fpr:.4f}, FNR: {fnr:.4f}, "
+                f"Train time: {train_time:.2f}s, Pred time: {pred_time:.4f}s"
+            )
+            print(f"  Best params: {best_params}")
+
+            metrics_rows.append(
+                {
+                    "Reducer": reducer_name,
+                    "n_components": n_comp,
+                    "Classifier": clf_name,
+                    "Accuracy": acc,
+                    "FPR": fpr,
+                    "FNR": fnr,
+                    "Train_time_s": train_time,
+                    "Predict_time_s": pred_time,
+                    "Best_params": str(best_params),
+                }
+            )
 
     # Save results
     metrics_df = pd.DataFrame(metrics_rows)
