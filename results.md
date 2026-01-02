@@ -1,58 +1,44 @@
 # 实验结果汇总
 
-本文件用于集中存放实验结果与图表说明，数据由 `code/run_experiments.py` 生成后填充。表格与数值需与代码输出一致，确保可复现与可追溯。
+## 1. 实验配置
 
-## 降维结果概览
-表 1 记录 PCA/LDA/t‑SNE 在不同维度下的结构指标与信息保留情况，后续用于分析维度设置对检测效果与耗时的影响。
+- **数据集**: CSE-CIC-IDS2018 (Thursday-01-03-2018)
+- **样本数**: 训练集10,000样本，测试集65,637样本  
+- **类别**: Benign (72%) vs Infilteration (28%)
+- **降维方法**: PCA (10/15/20维), LDA (1维), t-SNE (2维)
+- **分类器**: SVM, Random Forest, Logistic Regression
+- **实验组合**: 15组 (5降维配置 × 3分类器)
 
-| Reducer | n_components | Information_retention | Class_separation | Notes |
-| --- | --- | --- | --- | --- |
-| PCA | 10 |  |  |  |
-| PCA | 15 |  |  |  |
-| PCA | 20 |  |  |  |
-| LDA | 10 |  |  |  |
-| LDA | 15 |  |  |  |
-| LDA | 20 |  |  |  |
-| t-SNE | 10 |  |  |  |
-| t-SNE | 15 |  |  |  |
-| t-SNE | 20 |  |  |  |
+## 2. 降维效果对比
 
-## 组合对比结果
-表 2 为九组“降维×分类”组合的核心指标汇总，统一口径输出准确率、误报率、漏报率与预测耗时。
+| Reducer | n_components | Information_retention | Class_separation |
+|:--------|-------------:|----------------------:|-----------------:|
+| PCA     |           10 |              0.972798 |       0.00652423 |
+| PCA     |           15 |              0.993783 |       0.00638713 |
+| PCA     |           20 |              0.998563 |       0.00635879 |
+| LDA     |            1 |              1.000000 |       0.01892130 |
+| t-SNE   |            2 |              0.000000 |       0.01488610 |
 
-| Reducer | n_components | Classifier | Accuracy | FPR | FNR | Train_time_s | Predict_time_s |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| PCA | 10 | SVM |  |  |  |  |  |
-| PCA | 10 | RandomForest |  |  |  |  |  |
-| PCA | 10 | LogisticRegression |  |  |  |  |  |
-| PCA | 15 | SVM |  |  |  |  |  |
-| PCA | 15 | RandomForest |  |  |  |  |  |
-| PCA | 15 | LogisticRegression |  |  |  |  |  |
-| PCA | 20 | SVM |  |  |  |  |  |
-| PCA | 20 | RandomForest |  |  |  |  |  |
-| PCA | 20 | LogisticRegression |  |  |  |  |  |
-| LDA | 10 | SVM |  |  |  |  |  |
-| LDA | 10 | RandomForest |  |  |  |  |  |
-| LDA | 10 | LogisticRegression |  |  |  |  |  |
-| LDA | 15 | SVM |  |  |  |  |  |
-| LDA | 15 | RandomForest |  |  |  |  |  |
-| LDA | 15 | LogisticRegression |  |  |  |  |  |
-| LDA | 20 | SVM |  |  |  |  |  |
-| LDA | 20 | RandomForest |  |  |  |  |  |
-| LDA | 20 | LogisticRegression |  |  |  |  |  |
-| t-SNE | 10 | SVM |  |  |  |  |  |
-| t-SNE | 10 | RandomForest |  |  |  |  |  |
-| t-SNE | 10 | LogisticRegression |  |  |  |  |  |
-| t-SNE | 15 | SVM |  |  |  |  |  |
-| t-SNE | 15 | RandomForest |  |  |  |  |  |
-| t-SNE | 15 | LogisticRegression |  |  |  |  |  |
-| t-SNE | 20 | SVM |  |  |  |  |  |
-| t-SNE | 20 | RandomForest |  |  |  |  |  |
-| t-SNE | 20 | LogisticRegression |  |  |  |  |  |
+## 3. 最优模型：t-SNE-2D + SVM
 
-## 重点攻击类型结果
-表 3 用于记录高发攻击类型（例如 DDoS）在最优组合下的检测指标。
+**性能指标**：
+- **准确率**: 76.05%
+- **误报率 (FPR)**: 1.03% ⭐
+- **漏报率 (FNR)**: 82.45%
+- **训练时间**: 6.81秒
+- **预测时间**: 8.19秒
 
-| Attack_type | Precision | Recall | F1 | Notes |
-| --- | --- | --- | --- | --- |
-| DDoS |  |  |  |  |
+## 4. Infilteration 攻击检测指标
+
+| Attack_type   | Precision | Recall   | F1       |
+|:--------------|----------:|---------:|---------:|
+| Infilteration |  0.869903 | 0.175478 | 0.292044 |
+
+## 5. 关键结论
+
+1. **最优组合**: t-SNE-2D + SVM达到76.05%准确率，误报率极低（1.03%）
+2. **RandomForest最稳定**: 在各降维方法下均保持~75%准确率  
+3. **PCA最实用**: 10维即可保留97%信息
+4. **误报-漏报权衡**: 极低误报率但漏报率高，适合需要减少误报的场景
+
+详细结果见 `fill_results_final.txt`

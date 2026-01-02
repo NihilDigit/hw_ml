@@ -1,0 +1,93 @@
+QApplication: invalid style override 'kvantum' passed, ignoring it.
+	Available styles: Windows, Fusion
+Using device: cuda
+GPU: NVIDIA GeForce RTX 4060 Laptop GPU
+CUDA Version: 12.9
+Loading data from /home/spencer/Codes/openspec_projects/hw_ml/data/raw/Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv...
+Loaded 328181 samples with 2 classes
+Training samples: 262544, Test samples: 65637
+Sampling training set from 262544 to 30000...
+Training samples after sampling: 30000
+
+============================================================
+Experiment 1/3: PCA-10D
+============================================================
+
+--- Dimensions: 10 ---
+Reduced to shape: (30000, 10)
+Explained variance ratio: 0.9793
+Class separation ratio: 0.0052
+Generating 2D visualization...
+Saved plot to /home/spencer/Codes/openspec_projects/hw_ml/figures/PCA_10_2d.png
+
+Training SVM...
+  Accuracy: 0.7441, FPR: 0.0502, FNR: 0.7810, Train time: 35.81s, Pred time: 24.8152s
+  Best params: {'C': 10, 'gamma': 'scale', 'kernel': 'rbf'}
+
+Training RandomForest...
+  Accuracy: 0.7690, FPR: 0.0301, FNR: 0.7436, Train time: 24.06s, Pred time: 0.7832s
+  Best params: {'max_depth': 20, 'min_samples_split': 2, 'n_estimators': 200}
+
+Training LogisticRegression...
+  Accuracy: 0.7184, FPR: 0.0000, FNR: 1.0000, Train time: 1.04s, Pred time: 0.0013s
+  Best params: {'C': 0.1, 'max_iter': 1000}
+
+============================================================
+Experiment 2/3: PCA-15D
+============================================================
+
+--- Dimensions: 15 ---
+Reduced to shape: (30000, 15)
+Explained variance ratio: 0.9954
+Class separation ratio: 0.0052
+Generating 2D visualization...
+Saved plot to /home/spencer/Codes/openspec_projects/hw_ml/figures/PCA_15_2d.png
+
+Training SVM...
+  Accuracy: 0.7443, FPR: 0.0501, FNR: 0.7802, Train time: 34.43s, Pred time: 26.6811s
+  Best params: {'C': 10, 'gamma': 'scale', 'kernel': 'rbf'}
+
+Training RandomForest...
+  Accuracy: 0.7675, FPR: 0.0335, FNR: 0.7402, Train time: 22.83s, Pred time: 0.8769s
+  Best params: {'max_depth': 20, 'min_samples_split': 2, 'n_estimators': 200}
+
+Training LogisticRegression...
+  Accuracy: 0.7184, FPR: 0.0000, FNR: 1.0000, Train time: 0.53s, Pred time: 0.0014s
+  Best params: {'C': 0.1, 'max_iter': 1000}
+
+============================================================
+Experiment 3/3: PCA-20D
+============================================================
+
+--- Dimensions: 20 ---
+Reduced to shape: (30000, 20)
+Explained variance ratio: 0.9990
+Class separation ratio: 0.0051
+Generating 2D visualization...
+Saved plot to /home/spencer/Codes/openspec_projects/hw_ml/figures/PCA_20_2d.png
+
+Training SVM...
+  Accuracy: 0.7453, FPR: 0.0501, FNR: 0.7766, Train time: 34.46s, Pred time: 27.1550s
+  Best params: {'C': 10, 'gamma': 'scale', 'kernel': 'rbf'}
+
+Training RandomForest...
+  Accuracy: 0.7687, FPR: 0.0318, FNR: 0.7404, Train time: 29.61s, Pred time: 0.8359s
+  Best params: {'max_depth': 20, 'min_samples_split': 2, 'n_estimators': 200}
+
+Training LogisticRegression...
+  Accuracy: 0.7184, FPR: 0.0000, FNR: 1.0000, Train time: 0.50s, Pred time: 0.0019s
+  Best params: {'C': 0.1, 'max_iter': 1000}
+
+============================================================
+Results saved!
+Metrics: /home/spencer/Codes/openspec_projects/hw_ml/data/processed/metrics.csv
+Reduction metrics: /home/spencer/Codes/openspec_projects/hw_ml/data/processed/reduction_metrics.csv
+
+============================================================
+Computing attack-specific metrics for best model...
+Best combination: PCA + RandomForest
+  Accuracy: 0.7690
+
+============================================================
+All experiments completed!
+============================================================

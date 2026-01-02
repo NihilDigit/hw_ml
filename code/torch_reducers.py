@@ -65,8 +65,17 @@ class TorchLDA:
 
     def fit(self, X: np.ndarray, y: np.ndarray):
         """Fit LDA on data."""
+        from sklearn.preprocessing import LabelEncoder
         X_tensor = torch.from_numpy(X).float().to(self.device)
-        y_tensor = torch.from_numpy(y if isinstance(y, np.ndarray) else np.array([hash(yi) for yi in y])).long().to(self.device)
+
+        # Encode labels if they are strings/objects
+        if y.dtype == object or y.dtype.kind in ['U', 'S']:
+            label_encoder = LabelEncoder()
+            y_encoded = label_encoder.fit_transform(y)
+        else:
+            y_encoded = y
+
+        y_tensor = torch.from_numpy(y_encoded).long().to(self.device)
 
         classes = torch.unique(y_tensor)
         n_classes = len(classes)

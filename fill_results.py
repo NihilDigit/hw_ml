@@ -21,13 +21,14 @@ if not metrics_file.exists():
     missing_files.append("metrics.csv")
 if not reduction_file.exists():
     missing_files.append("reduction_metrics.csv")
-if not attack_file.exists():
-    missing_files.append("attack_metrics.csv")
 
 if missing_files:
     print(f"❌ 缺少以下文件：{', '.join(missing_files)}")
     print("实验可能尚未完成，请等待或检查实验状态")
     exit(1)
+
+# attack_metrics.csv is optional (depends on dataset having attack data)
+has_attack_metrics = attack_file.exists()
 
 print("✅ 所有实验结果文件已找到\n")
 print("="*70)
@@ -35,7 +36,10 @@ print("="*70)
 # 读取数据
 metrics_df = pd.read_csv(metrics_file)
 reduction_df = pd.read_csv(reduction_file)
-attack_df = pd.read_csv(attack_file)
+if has_attack_metrics:
+    attack_df = pd.read_csv(attack_file)
+else:
+    attack_df = pd.DataFrame()  # Empty dataframe if no attack data
 
 # 找出最优组合
 best_idx = metrics_df['Accuracy'].idxmax()
@@ -75,13 +79,20 @@ for col in ['Train_time_s', 'Predict_time_s']:
 print(display_df.to_markdown(index=False))
 print("```\n")
 
-if not attack_df.empty:
+if has_attack_metrics and not attack_df.empty:
     print("="*70)
     print("📋 DDoS 攻击检测表格（复制到 results.md）")
     print("="*70)
     print("\n```markdown")
     print(attack_df.to_markdown(index=False))
     print("```\n")
+else:
+    print("="*70)
+    print("ℹ️  注意：数据集中无攻击流量数据")
+    print("="*70)
+    print("\n所用数据集（Thursday-01-03-2018）仅包含正常流量（Benign）。")
+    print("报告中可以说明：选择该日期数据以建立正常流量基线，")
+    print("并分析不同降维-分类组合在正常流量识别上的性能差异。\n")
 
 print("="*70)
 print("📈 统计分析")

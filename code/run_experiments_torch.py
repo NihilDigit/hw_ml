@@ -64,12 +64,14 @@ def reducer_factory(name, n_components, n_classes, device="cuda"):
         n_comp = min(n_components, max(n_classes - 1, 1))
         return TorchLDA(n_components=n_comp, device=device)
     if name == "t-SNE":
-        return TorchTSNE(
+        # Use sklearn's CPU version to avoid GPU OOM
+        from sklearn.manifold import TSNE
+        return TSNE(
             n_components=n_components,
             perplexity=30,
-            learning_rate=200.0,
-            n_iter=1000,
-            device=device,
+            learning_rate='auto',
+            max_iter=1000,
+            init='pca',
             random_state=RANDOM_SEED,
         )
     raise ValueError(f"Unknown reducer: {name}")
@@ -101,11 +103,11 @@ def main():
     )
     print(f"Training samples: {len(X_train)}, Test samples: {len(X_test)}")
 
-    # Sample training set to 50k for faster experimentation
-    if len(X_train) > 50000:
-        print(f"Sampling training set from {len(X_train)} to 50000...")
+    # Sample training set to 10k for faster experimentation and t-SNE feasibility
+    if len(X_train) > 10000:
+        print(f"Sampling training set from {len(X_train)} to 10000...")
         sample_idx = np.random.RandomState(RANDOM_SEED).choice(
-            len(X_train), size=50000, replace=False
+            len(X_train), size=10000, replace=False
         )
         X_train = X_train[sample_idx]
         y_train = y_train[sample_idx]
@@ -116,17 +118,14 @@ def main():
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    # Experiment design: 15 combinations
-    # PCA: 3 dimensions × 3 classifiers = 9 combinations
-    # LDA: 15 dimensions × 3 classifiers = 3 combinations
-    # t-SNE: 15 dimensions × 3 classifiers = 3 combinations
+    # Experiment design: 15 combinations (5 reducers × 3 classifiers)
+    # Three types of dimensionality reduction methods: PCA, LDA, t-SNE
     experiments = [
-        # PCA experiments (9 combinations)
-        ("PCA", 10), ("PCA", 15), ("PCA", 20),
-        # LDA experiments (3 combinations)
-        ("LDA", 15),
-        # t-SNE experiments (3 combinations)
-        ("t-SNE", 15),
+        ("PCA", 10),      # PCA-10D
+        ("PCA", 15),      # PCA-15D
+        ("PCA", 20),      # PCA-20D
+        ("LDA", 1),       # LDA-1D (max for binary classification)
+        ("t-SNE", 2),     # t-SNE-2D (for visualization and classification)
     ]
 
     # Classifier configurations
@@ -137,18 +136,18 @@ def main():
             "type": "sklearn",
             "model": SVC(),
             "param_grid": {
-                "C": [0.1, 1, 10],
-                "kernel": ["linear", "rbf"],
-                "gamma": ["scale", "auto"],
+                "C": [1, 10],           # 2 values (optimized)
+                "kernel": ["rbf"],      # RBF only
+                "gamma": ["scale"],     # scale only
             },
         },
         "RandomForest": {
             "type": "sklearn",
             "model": RandomForestClassifier(random_state=RANDOM_SEED),
             "param_grid": {
-                "n_estimators": [200, 500],
-                "max_depth": [None, 10, 20],
-                "min_samples_split": [2, 5],
+                "n_estimators": [200],      # 200 trees
+                "max_depth": [None, 20],    # 2 values
+                "min_samples_split": [2],   # default
             },
         },
         "LogisticRegression": {
@@ -353,10 +352,12 @@ def main():
     y_pred = model.predict(X_test_red)
 
     # Per-attack metrics
-    attack_label = "DDoS"
+    # Auto-detect attack label (non-Benign class)
     labels = np.unique(y_test)
+    attack_labels = [l for l in labels if l != "Benign"]
 
-    if attack_label in labels:
+    if len(attack_labels) > 0:
+        attack_label = attack_labels[0]  # Use first attack type found
         pr, rc, f1, _ = precision_recall_fscore_support(
             y_test, y_pred, labels=[attack_label], average=None
         )

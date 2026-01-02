@@ -1,0 +1,139 @@
+QApplication: invalid style override 'kvantum' passed, ignoring it.
+	Available styles: Windows, Fusion
+Using device: cuda
+GPU: NVIDIA GeForce RTX 4060 Laptop GPU
+CUDA Version: 12.9
+Loading data from /home/spencer/Codes/openspec_projects/hw_ml/data/raw/Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv...
+Loaded 328181 samples with 2 classes
+Training samples: 262544, Test samples: 65637
+Sampling training set from 262544 to 10000...
+Training samples after sampling: 10000
+
+============================================================
+Experiment 1/5: PCA-10D
+============================================================
+
+--- Dimensions: 10 ---
+Reduced to shape: (10000, 10)
+Explained variance ratio: 0.9728
+Class separation ratio: 0.0065
+Generating 2D visualization...
+Saved plot to /home/spencer/Codes/openspec_projects/hw_ml/figures/PCA_10_2d.png
+
+Training SVM...
+  Accuracy: 0.7439, FPR: 0.0504, FNR: 0.7809, Train time: 5.12s, Pred time: 8.7575s
+  Best params: {'C': 10, 'gamma': 'scale', 'kernel': 'rbf'}
+
+Training RandomForest...
+  Accuracy: 0.7539, FPR: 0.0559, FNR: 0.7312, Train time: 8.14s, Pred time: 0.7986s
+  Best params: {'max_depth': 20, 'min_samples_split': 2, 'n_estimators': 200}
+
+Training LogisticRegression...
+  Accuracy: 0.7184, FPR: 0.0000, FNR: 1.0000, Train time: 1.01s, Pred time: 0.0015s
+  Best params: {'C': 0.1, 'max_iter': 1000}
+
+============================================================
+Experiment 2/5: PCA-15D
+============================================================
+
+--- Dimensions: 15 ---
+Reduced to shape: (10000, 15)
+Explained variance ratio: 0.9938
+Class separation ratio: 0.0064
+Generating 2D visualization...
+Saved plot to /home/spencer/Codes/openspec_projects/hw_ml/figures/PCA_15_2d.png
+
+Training SVM...
+  Accuracy: 0.7459, FPR: 0.0503, FNR: 0.7741, Train time: 5.22s, Pred time: 8.9351s
+  Best params: {'C': 10, 'gamma': 'scale', 'kernel': 'rbf'}
+
+Training RandomForest...
+  Accuracy: 0.7491, FPR: 0.0667, FNR: 0.7211, Train time: 6.59s, Pred time: 0.7887s
+  Best params: {'max_depth': 20, 'min_samples_split': 2, 'n_estimators': 200}
+
+Training LogisticRegression...
+  Accuracy: 0.7184, FPR: 0.0000, FNR: 1.0000, Train time: 0.55s, Pred time: 0.0015s
+  Best params: {'C': 0.1, 'max_iter': 1000}
+
+============================================================
+Experiment 3/5: PCA-20D
+============================================================
+
+--- Dimensions: 20 ---
+Reduced to shape: (10000, 20)
+Explained variance ratio: 0.9986
+Class separation ratio: 0.0064
+Generating 2D visualization...
+Saved plot to /home/spencer/Codes/openspec_projects/hw_ml/figures/PCA_20_2d.png
+
+Training SVM...
+  Accuracy: 0.7447, FPR: 0.0564, FNR: 0.7629, Train time: 3.42s, Pred time: 8.6863s
+  Best params: {'C': 10, 'gamma': 'scale', 'kernel': 'rbf'}
+
+Training RandomForest...
+  Accuracy: 0.7482, FPR: 0.0687, FNR: 0.7190, Train time: 8.40s, Pred time: 0.8396s
+  Best params: {'max_depth': 20, 'min_samples_split': 2, 'n_estimators': 200}
+
+Training LogisticRegression...
+  Accuracy: 0.7184, FPR: 0.0000, FNR: 1.0000, Train time: 0.53s, Pred time: 0.0015s
+  Best params: {'C': 0.1, 'max_iter': 1000}
+
+============================================================
+Experiment 4/5: LDA-1D
+============================================================
+
+--- Dimensions: 1 ---
+Reduced to shape: (10000, 1)
+Explained variance ratio: 1.0000
+Class separation ratio: 0.0189
+
+Training SVM...
+  Accuracy: 0.7269, FPR: 0.0950, FNR: 0.7276, Train time: 4.21s, Pred time: 8.5960s
+  Best params: {'C': 1, 'gamma': 'scale', 'kernel': 'rbf'}
+
+Training RandomForest...
+  Accuracy: 0.7391, FPR: 0.0729, FNR: 0.7406, Train time: 2.70s, Pred time: 0.7628s
+  Best params: {'max_depth': 20, 'min_samples_split': 2, 'n_estimators': 200}
+
+Training LogisticRegression...
+  Accuracy: 0.7184, FPR: 0.0000, FNR: 1.0000, Train time: 0.41s, Pred time: 0.0009s
+  Best params: {'C': 0.1, 'max_iter': 1000}
+
+============================================================
+Experiment 5/5: t-SNE-2D
+============================================================
+
+--- Dimensions: 2 ---
+Reduced to shape: (10000, 2)
+Class separation ratio: 0.0149
+Generating 2D visualization...
+Saved plot to /home/spencer/Codes/openspec_projects/hw_ml/figures/t-SNE_2_2d.png
+
+Training SVM...
+  Accuracy: 0.7605, FPR: 0.0103, FNR: 0.8245, Train time: 6.81s, Pred time: 8.1877s
+  Best params: {'C': 10, 'gamma': 'scale', 'kernel': 'rbf'}
+
+Training RandomForest...
+  Accuracy: 0.7491, FPR: 0.0645, FNR: 0.7267, Train time: 2.64s, Pred time: 0.8349s
+  Best params: {'max_depth': 20, 'min_samples_split': 2, 'n_estimators': 200}
+
+Training LogisticRegression...
+  Accuracy: 0.6413, FPR: 0.2682, FNR: 0.5897, Train time: 3.79s, Pred time: 0.0009s
+  Best params: {'C': 1, 'max_iter': 1000}
+
+============================================================
+Results saved!
+Metrics: /home/spencer/Codes/openspec_projects/hw_ml/data/processed/metrics.csv
+Reduction metrics: /home/spencer/Codes/openspec_projects/hw_ml/data/processed/reduction_metrics.csv
+
+============================================================
+Computing attack-specific metrics for best model...
+Best combination: t-SNE + SVM
+  Accuracy: 0.7605
+
+Attack-specific metrics saved to /home/spencer/Codes/openspec_projects/hw_ml/data/processed/attack_metrics.csv
+  Infilteration - Precision: 0.8699, Recall: 0.1755, F1: 0.2920
+
+============================================================
+All experiments completed!
+============================================================
