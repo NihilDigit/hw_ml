@@ -6,8 +6,11 @@
 __pycache__/
 *.pyc
 
-# Large raw datasets
-data/raw/*.csv
+# Data directories
+data/
 
 # CSV outputs
 *.csv
+
+# Course requirement PDF (do not track)
+《机器学习实践》课程设计题目与要求.pdf
