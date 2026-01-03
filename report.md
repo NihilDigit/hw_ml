@@ -16,8 +16,6 @@ Intrusion detection in high-throughput production networks requires a practical 
 
 ## 目录
 
-建议在导出 docx 时启用自动目录：`pandoc report.md -o report.docx --toc --toc-depth=3`。
-
 \pagebreak
 
 ---
@@ -36,7 +34,7 @@ Intrusion detection in high-throughput production networks requires a practical 
 
 在指标口径方面，本文采用以下定义：准确率用于衡量整体预测一致性；误报率（False Positive Rate, FPR）刻画将正常流量误判为攻击的比例；漏报率（False Negative Rate, FNR）刻画将攻击流量误判为正常的比例。由于本实验为多类别设置，FPR/FNR 采用“Benign vs Attack”的二值化口径计算，设二分类混淆矩阵元素为 TP、TN、FP、FN，则
 
-$$\\text{Accuracy}=\\frac{TP+TN}{TP+TN+FP+FN},\\quad \\text{FPR}=\\frac{FP}{FP+TN},\\quad \\text{FNR}=\\frac{FN}{FN+TP}.$$
+$$\text{Accuracy}=\frac{TP+TN}{TP+TN+FP+FN},\quad \text{FPR}=\frac{FP}{FP+TN},\quad \text{FNR}=\frac{FN}{FN+TP}.$$
 
 为反映工程可用性，本文同时记录训练耗时与测试集预测耗时，并在分析中换算为平均单样本预测时延，以评估不同组合的实时检测潜力。针对攻击类型层面的差异，本文对各攻击类别报告 Precision、Recall 与 F1，并在结果讨论中重点关注样本量较高的攻击类型及其误差模式。
 
@@ -72,23 +70,25 @@ $$\\text{Accuracy}=\\frac{TP+TN}{TP+TN+FP+FN},\\quad \\text{FPR}=\\frac{FP}{FP+T
 
 表 2-1  子集类别分布统计（3,000 条）
 
-| Label                   |   Count |
-|:------------------------|--------:|
-| Benign                  |    1688 |
-| DDOS attack-HOIC        |     153 |
-| DDoS attacks-LOIC-HTTP  |     140 |
-| DoS attacks-Hulk        |     126 |
-| Bot                     |     105 |
-| SSH-Bruteforce          |      93 |
-| FTP-BruteForce          |      93 |
-| Infilteration           |      89 |
-| DoS attacks-SlowHTTPTest|      87 |
-| DoS attacks-GoldenEye   |      75 |
-| DoS attacks-Slowloris   |      71 |
-| Brute Force -XSS        |      70 |
-| SQL Injection           |      70 |
-| DDOS attack-LOIC-UDP    |      70 |
-| Brute Force -Web        |      70 |
+为便于纸质版排版，后续表格与图中对部分攻击类别采用简写标签（如 `BF-Web`、`DDoS-HTTP`、`SQLi` 等），其含义与数据集原始标签一一对应。
+
+|Class|Count|
+|:--|--:|
+|Benign|1688|
+|DDoS-HOIC|153|
+|DDoS-HTTP|140|
+|DoS-Hulk|126|
+|Bot|105|
+|SSH-BF|93|
+|FTP-BF|93|
+|Infil|89|
+|DoS-SlowHTTP|87|
+|DoS-GE|75|
+|DoS-Slowloris|71|
+|BF-XSS|70|
+|SQLi|70|
+|DDoS-UDP|70|
+|BF-Web|70|
 
 ### 2.4 归一化、划分与训练采样策略
 
@@ -168,14 +168,14 @@ $$\text{Sep} = \frac{\sum_c n_c\lVert \mu_c-\mu\rVert^2}{\sum_c\sum_{x\in c}\lVe
 
 表 4-1  降维效果对比（信息保留与类间分离）
 
-| Reducer   |   n_components |   Information_retention |   Class_separation |
-|:----------|---------------:|------------------------:|-------------------:|
-| LDA       |              6 |                1        |           0.46796  |
-| LDA       |             10 |                1        |           0.368353 |
-| LDA       |             14 |                1        |           0.259825 |
-| PCA       |             10 |                0.956434 |           0.245526 |
-| PCA       |             15 |                0.987395 |           0.242444 |
-| PCA       |             20 |                0.9971   |           0.240645 |
+|Reducer|Dim|InfoRet|Sep|
+|:--|--:|--:|--:|
+|LDA|6|1.000|0.468|
+|LDA|10|1.000|0.368|
+|LDA|14|1.000|0.260|
+|PCA|10|0.956|0.246|
+|PCA|15|0.987|0.242|
+|PCA|20|0.997|0.241|
 
 为直观呈现 PCA 在不同维度下的信息保留趋势，图 4-1 绘制了信息保留率随主成分数变化的曲线。可以观察到，在 30 维特征上，前 10 个主成分已解释绝大多数方差，继续增加维度的边际收益快速降低，为后续维度选择提供了依据。
 
@@ -187,28 +187,51 @@ $$\text{Sep} = \frac{\sum_c n_c\lVert \mu_c-\mu\rVert^2}{\sum_c\sum_{x\in c}\lVe
 
 在统一的训练/测试划分与超参数网格下，本文完成 18 组“降维×分类”组合评测，完整结果见表 4-2。与仅关注总体准确率不同，表 4-2 同时给出 FPR、FNR 与训练/预测耗时，使得不同组合在“误报—漏报—实时性”三方面的差异能够被同时观察与比较。
 
-表 4-2  “降维×分类”组合性能对比（18 组）
+表 4-2（a）  “降维×分类”组合性能对比（准确率与误报/漏报，18 组）
 
-| Reducer   |   n_components | Classifier         |   Accuracy |        FPR |      FNR |   Train_time_s |   Predict_time_s | Best_params                                                                |
-|:----------|---------------:|:-------------------|-----------:|-----------:|---------:|---------------:|-----------------:|:---------------------------------------------------------------------------|
-| LDA       |              6 | LogisticRegression |   0.656667 | 0.0236686  | 0.729008 |       0.198633 |       0.00139284 | {'C': 10.0, 'max_iter': 1000}                                              |
-| LDA       |              6 | RandomForest       |   0.865    | 0.0443787  | 0.110687 |       7.29606  |       0.0229588  | {'n_estimators': 200, 'max_depth': 20, 'n_streams': 1, 'random_state': 42} |
-| LDA       |              6 | SVM                |   0.775    | 0.0177515  | 0.431298 |       0.627556 |       0.0209675  | {'C': 10, 'kernel': 'rbf', 'gamma': 'scale'}                               |
-| LDA       |             10 | LogisticRegression |   0.676667 | 0.0236686  | 0.675573 |       0.202028 |       0.00134635 | {'C': 10.0, 'max_iter': 1000}                                              |
-| LDA       |             10 | RandomForest       |   0.866667 | 0.0443787  | 0.114504 |       7.30362  |       0.0278714  | {'n_estimators': 200, 'max_depth': 20, 'n_streams': 1, 'random_state': 42} |
-| LDA       |             10 | SVM                |   0.776667 | 0.0147929  | 0.446565 |       0.713091 |       0.022758   | {'C': 10, 'kernel': 'rbf', 'gamma': 'scale'}                               |
-| LDA       |             14 | LogisticRegression |   0.703333 | 0.0177515  | 0.625954 |       0.200935 |       0.00142312 | {'C': 10.0, 'max_iter': 1000}                                              |
-| LDA       |             14 | RandomForest       |   0.861667 | 0.0502959  | 0.110687 |       7.30235  |       0.0232406  | {'n_estimators': 200, 'max_depth': 20, 'n_streams': 1, 'random_state': 42} |
-| LDA       |             14 | SVM                |   0.773333 | 0.0147929  | 0.442748 |       0.693289 |       0.0236471  | {'C': 10, 'kernel': 'rbf', 'gamma': 'scale'}                               |
-| PCA       |             10 | LogisticRegression |   0.688333 | 0.0177515  | 0.660305 |       0.208917 |       0.00137401 | {'C': 10.0, 'max_iter': 1000}                                              |
-| PCA       |             10 | RandomForest       |   0.853333 | 0.0532544  | 0.110687 |       7.33339  |       0.0241499  | {'n_estimators': 200, 'max_depth': 20, 'n_streams': 1, 'random_state': 42} |
-| PCA       |             10 | SVM                |   0.768333 | 0.00887574 | 0.461832 |       0.702959 |       0.0217595  | {'C': 10, 'kernel': 'rbf', 'gamma': 'scale'}                               |
-| PCA       |             15 | LogisticRegression |   0.696667 | 0.0207101  | 0.633588 |       0.228025 |       0.00140309 | {'C': 10.0, 'max_iter': 1000}                                              |
-| PCA       |             15 | RandomForest       |   0.86     | 0.0502959  | 0.114504 |       7.26358  |       0.0246344  | {'n_estimators': 200, 'max_depth': 20, 'n_streams': 1, 'random_state': 42} |
-| PCA       |             15 | SVM                |   0.78     | 0.00887574 | 0.435115 |       0.690517 |       0.0233552  | {'C': 10, 'kernel': 'rbf', 'gamma': 'scale'}                               |
-| PCA       |             20 | LogisticRegression |   0.718333 | 0.0177515  | 0.583969 |       0.224524 |       0.00136375 | {'C': 10.0, 'max_iter': 1000}                                              |
-| PCA       |             20 | RandomForest       |   0.863333 | 0.0473373  | 0.103053 |       7.29752  |       0.0247982  | {'n_estimators': 200, 'max_depth': 20, 'n_streams': 1, 'random_state': 42} |
-| PCA       |             20 | SVM                |   0.783333 | 0.00887574 | 0.431298 |       0.716793 |       0.023041   | {'C': 10, 'kernel': 'rbf', 'gamma': 'scale'}                               |
+|Reducer|Dim|Clf|Acc|FPR|FNR|
+|:--|--:|:--|--:|--:|--:|
+|LDA|6|LR|0.657|0.024|0.729|
+|LDA|6|RF|0.865|0.044|0.111|
+|LDA|6|SVM|0.775|0.018|0.431|
+|LDA|10|LR|0.677|0.024|0.676|
+|LDA|10|RF|0.867|0.044|0.115|
+|LDA|10|SVM|0.777|0.015|0.447|
+|LDA|14|LR|0.703|0.018|0.626|
+|LDA|14|RF|0.862|0.050|0.111|
+|LDA|14|SVM|0.773|0.015|0.443|
+|PCA|10|LR|0.688|0.018|0.660|
+|PCA|10|RF|0.853|0.053|0.111|
+|PCA|10|SVM|0.768|0.009|0.462|
+|PCA|15|LR|0.697|0.021|0.634|
+|PCA|15|RF|0.860|0.050|0.115|
+|PCA|15|SVM|0.780|0.009|0.435|
+|PCA|20|LR|0.718|0.018|0.584|
+|PCA|20|RF|0.863|0.047|0.103|
+|PCA|20|SVM|0.783|0.009|0.431|
+
+表 4-2（b）  “降维×分类”组合效率对比（训练耗时与预测时延，18 组）
+
+|Reducer|Dim|Clf|Train(s)|Latency(ms/sample)|
+|:--|--:|:--|--:|--:|
+|LDA|6|LR|0.199|0.0023|
+|LDA|6|RF|7.296|0.0383|
+|LDA|6|SVM|0.628|0.0349|
+|LDA|10|LR|0.202|0.0022|
+|LDA|10|RF|7.304|0.0465|
+|LDA|10|SVM|0.713|0.0379|
+|LDA|14|LR|0.201|0.0024|
+|LDA|14|RF|7.302|0.0387|
+|LDA|14|SVM|0.693|0.0394|
+|PCA|10|LR|0.209|0.0023|
+|PCA|10|RF|7.333|0.0402|
+|PCA|10|SVM|0.703|0.0363|
+|PCA|15|LR|0.228|0.0023|
+|PCA|15|RF|7.264|0.0411|
+|PCA|15|SVM|0.691|0.0389|
+|PCA|20|LR|0.225|0.0023|
+|PCA|20|RF|7.298|0.0413|
+|PCA|20|SVM|0.717|0.0384|
 
 从分类器角度看，随机森林在不同降维设置下表现相对稳健：在 PCA-10/15/20 与 LDA-6/10/14 的表示上，其准确率维持在较窄区间内，并在多个设置下取得最优或次优结果。SVM 在该任务上能够保持较低的误报率，但漏报率相对偏高，反映出其在多类别场景下对部分攻击类型的召回不足；逻辑回归作为线性基线，其表现受表示线性可分性影响更明显，在部分设置下出现明显性能下降。
 
@@ -230,24 +253,24 @@ $$\text{Sep} = \frac{\sum_c n_c\lVert \mu_c-\mu\rVert^2}{\sum_c\sum_{x\in c}\lVe
 
 表 4-3  重点攻击类型检测指标（最优组合）
 
-| Attack_type              |   Precision |    Recall |       F1 |
-|:-------------------------|------------:|----------:|---------:|
-| Bot                      |    0.75     | 1         | 0.857143 |
-| Brute Force -Web         |    0.714286 | 0.714286  | 0.714286 |
-| Brute Force -XSS         |    0.916667 | 0.785714  | 0.846154 |
-| DDOS attack-HOIC         |    0.793103 | 0.741935  | 0.766667 |
-| DDOS attack-LOIC-UDP     |    1        | 1         | 1        |
-| DDoS attacks-LOIC-HTTP   |    0.928571 | 0.928571  | 0.928571 |
-| DoS attacks-GoldenEye    |    0.916667 | 0.733333  | 0.814815 |
-| DoS attacks-Hulk         |    0.652174 | 0.6       | 0.625    |
-| DoS attacks-SlowHTTPTest |    0.9      | 0.529412  | 0.666667 |
-| DoS attacks-Slowloris    |    0.928571 | 0.928571  | 0.928571 |
-| FTP-BruteForce           |    0.642857 | 0.947368  | 0.765957 |
-| Infilteration            |    1        | 0.0555556 | 0.105263 |
-| SQL Injection            |    0.571429 | 0.571429  | 0.571429 |
-| SSH-Bruteforce           |    0.85     | 0.944444  | 0.894737 |
+|Class|Prec|Rec|F1|
+|:--|--:|--:|--:|
+|Bot|0.750|1.000|0.857|
+|BF-Web|0.714|0.714|0.714|
+|BF-XSS|0.917|0.786|0.846|
+|DDoS-HOIC|0.793|0.742|0.767|
+|DDoS-UDP|1.000|1.000|1.000|
+|DDoS-HTTP|0.929|0.929|0.929|
+|DoS-GE|0.917|0.733|0.815|
+|DoS-Hulk|0.652|0.600|0.625|
+|DoS-SlowHTTP|0.900|0.529|0.667|
+|DoS-Slowloris|0.929|0.929|0.929|
+|FTP-BF|0.643|0.947|0.766|
+|Infil|1.000|0.056|0.105|
+|SQLi|0.571|0.571|0.571|
+|SSH-BF|0.850|0.944|0.895|
 
-从表 4-3 可以看到，部分 DDoS/DoS 相关类别能够获得较高的 Precision 与 Recall，说明其流量模式在所选特征空间中具有相对稳定的可分结构；但也存在如 Infilteration 这类类别 Recall 显著偏低的情况，表明其样本在低维表示中更容易与其他类别混叠，或受到样本量与分布差异的影响。由于误报与漏报对应的安全代价不同，模型选择不宜由单一指标决定，而应在总体性能（Accuracy、FPR、FNR）与关键攻击类型的检出能力之间进行权衡。
+从表 4-3 可以看到，部分 DDoS/DoS 相关类别能够获得较高的 Precision 与 Recall，说明其流量模式在所选特征空间中具有相对稳定的可分结构；但也存在如渗透（Infiltration）这类类别 Recall 显著偏低的情况，表明其样本在低维表示中更容易与其他类别混叠，或受到样本量与分布差异的影响。由于误报与漏报对应的安全代价不同，模型选择不宜由单一指标决定，而应在总体性能（Accuracy、FPR、FNR）与关键攻击类型的检出能力之间进行权衡。
 
 ### 4.4 可视化与误差来源解释
 
@@ -552,35 +575,35 @@ THEN：标记为 Low/Medium-Risk；触发短时聚合阈值（同源同目的的
 
 本文在 CICFlowMeter 输出特征中固定选取 30 项核心流统计特征用于建模，具体如下。
 
-| Feature |
+|Feature|
 |:--|
-| Flow Duration |
-| Tot Fwd Pkts |
-| Tot Bwd Pkts |
-| TotLen Fwd Pkts |
-| TotLen Bwd Pkts |
-| Fwd Pkt Len Max |
-| Fwd Pkt Len Min |
-| Fwd Pkt Len Mean |
-| Fwd Pkt Len Std |
-| Bwd Pkt Len Max |
-| Bwd Pkt Len Min |
-| Bwd Pkt Len Mean |
-| Bwd Pkt Len Std |
-| Flow Byts/s |
-| Flow Pkts/s |
-| Flow IAT Mean |
-| Flow IAT Std |
-| Flow IAT Max |
-| Flow IAT Min |
-| Fwd IAT Mean |
-| Fwd IAT Std |
-| Bwd IAT Mean |
-| Bwd IAT Std |
-| SYN Flag Cnt |
-| ACK Flag Cnt |
-| PSH Flag Cnt |
-| FIN Flag Cnt |
-| RST Flag Cnt |
-| Active Mean |
-| Idle Mean |
+|Flow Duration|
+|Tot Fwd Pkts|
+|Tot Bwd Pkts|
+|TotLen Fwd Pkts|
+|TotLen Bwd Pkts|
+|Fwd Pkt Len Max|
+|Fwd Pkt Len Min|
+|Fwd Pkt Len Mean|
+|Fwd Pkt Len Std|
+|Bwd Pkt Len Max|
+|Bwd Pkt Len Min|
+|Bwd Pkt Len Mean|
+|Bwd Pkt Len Std|
+|Flow Byts/s|
+|Flow Pkts/s|
+|Flow IAT Mean|
+|Flow IAT Std|
+|Flow IAT Max|
+|Flow IAT Min|
+|Fwd IAT Mean|
+|Fwd IAT Std|
+|Bwd IAT Mean|
+|Bwd IAT Std|
+|SYN Flag Cnt|
+|ACK Flag Cnt|
+|PSH Flag Cnt|
+|FIN Flag Cnt|
+|RST Flag Cnt|
+|Active Mean|
+|Idle Mean|
