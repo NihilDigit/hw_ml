@@ -11,7 +11,7 @@
 1. **完整代码实现**
    - `code/torch_reducers.py` - GPU 加速降维
    - `code/torch_classifiers.py` - GPU 加速分类器
-   - `code/run_experiments_torch.py` - 优化的实验流程
+   - `code/run_experiments.py` - 优化的实验流程
    - `code/preprocess.py` - 改进的数据预处理
    - `code/metrics.py`, `code/plots.py`, `code/config.py`
 
@@ -54,7 +54,7 @@
 **检查实验状态**：
 ```bash
 # 查看进程是否还在运行
-ps aux | grep run_experiments_torch.py
+ps aux | grep run_experiments.py
 
 # 查看生成的文件
 ls -lh data/processed/

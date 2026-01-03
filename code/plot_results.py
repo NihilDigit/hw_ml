@@ -24,7 +24,7 @@ def _savefig(path: Path) -> None:
 
     path.parent.mkdir(parents=True, exist_ok=True)
     plt.tight_layout()
-    plt.savefig(path, dpi=200)
+    plt.savefig(path, dpi=200, bbox_inches="tight")
     plt.close()
 
 
@@ -34,12 +34,13 @@ def plot_accuracy_by_combination(metrics: pd.DataFrame, out_path: Path) -> None:
     setup_ieee_style()
 
     df = metrics.copy()
+    clf_short = {"RandomForest": "RF", "LogisticRegression": "LR", "SVM": "SVM"}
     df["Combo"] = (
         df["Reducer"].astype(str)
         + "-"
         + df["n_components"].astype(int).astype(str)
-        + "D + "
-        + df["Classifier"].astype(str)
+        + " + "
+        + df["Classifier"].map(clf_short).fillna(df["Classifier"].astype(str))
     )
     df = df.sort_values("Accuracy", ascending=False)
 
@@ -109,20 +110,21 @@ def plot_predict_time(metrics: pd.DataFrame, out_path: Path, test_size: int = 65
 
     df = metrics.copy()
     df["ms_per_sample"] = df["Predict_time_s"] / float(test_size) * 1000.0
+    clf_short = {"RandomForest": "RF", "LogisticRegression": "LR", "SVM": "SVM"}
     df["Combo"] = (
         df["Reducer"].astype(str)
         + "-"
         + df["n_components"].astype(int).astype(str)
-        + "D + "
-        + df["Classifier"].astype(str)
+        + " + "
+        + df["Classifier"].map(clf_short).fillna(df["Classifier"].astype(str))
     )
     df = df.sort_values("ms_per_sample", ascending=True)
 
-    fig, ax = plt.subplots(figsize=(7.6, 3.4))
-    ax.bar(df["Combo"], df["ms_per_sample"], color="#72B7B2")
+    fig, ax = plt.subplots(figsize=(6.6, 3.8))
+    ax.barh(df["Combo"], df["ms_per_sample"], color="#72B7B2")
     ax.set_ylabel("Prediction latency (ms/sample)")
-    ax.set_xlabel("Reducer + Classifier")
-    ax.tick_params(axis="x", labelrotation=45, labelsize=7)
+    ax.set_xlabel("Prediction latency (ms/sample)")
+    ax.tick_params(axis="y", labelsize=8)
     _savefig(out_path)
 
 
@@ -155,11 +157,11 @@ def plot_class_distribution(clean_df: pd.DataFrame, out_path: Path) -> None:
 
     counts = clean_df[LABEL_COL].value_counts()
 
-    fig, ax = plt.subplots(figsize=(4.8, 3.2))
+    fig, ax = plt.subplots(figsize=(6.6, 3.2))
     ax.bar(counts.index.astype(str), counts.values.astype(int), color="#4C78A8")
     ax.set_xlabel("Class label")
     ax.set_ylabel("Count")
-    ax.tick_params(axis="x", labelrotation=0)
+    ax.tick_params(axis="x", labelrotation=35, labelsize=7)
     _savefig(out_path)
 
 
@@ -214,13 +216,14 @@ def main() -> None:
 
     plot_accuracy_by_combination(metrics, FIGURES_DIR / "Accuracy_by_Combination.png")
     plot_tradeoff_fpr_fnr(metrics, FIGURES_DIR / "Tradeoff_FPR_vs_FNR.png")
-    plot_predict_time(metrics, FIGURES_DIR / "PredictLatency_ms_per_sample.png")
+    # The current experiment uses a 3,000-sample subset with an 80/20 split.
+    plot_predict_time(metrics, FIGURES_DIR / "PredictLatency_ms_per_sample.png", test_size=600)
     plot_pca_information_retention(reduction, FIGURES_DIR / "PCA_InformationRetention.png")
 
     # Class distribution after applying the project's fixed cleaning rules.
     from preprocess import load_and_clean
 
-    csv_path = DATA_RAW / "Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv"
+    csv_path = DATA_PROCESSED / "ids2018_subset_3k.csv"
     clean_df = load_and_clean(str(csv_path))
     plot_class_distribution(clean_df, FIGURES_DIR / "ClassDistribution_AfterCleaning.png")
 

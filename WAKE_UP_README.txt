@@ -37,9 +37,9 @@
 最快路径（如果实验失败/太慢）:
 ================================================================================
 
-pkill -f run_experiments_torch.py  # 中止
-# 编辑 code/run_experiments_torch.py（减少实验组合）
-pixi run python code/run_experiments_torch.py  # 重新运行
+pkill -f run_experiments.py  # 中止
+# 编辑 code/run_experiments.py（减少实验组合）
+pixi run python code/run_experiments.py  # 重新运行
 # 30-60分钟后完成，然后填充数据
 
 详情请看 URGENT_UPDATE.md 中的"方案 A+D"

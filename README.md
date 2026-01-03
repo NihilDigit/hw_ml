@@ -13,9 +13,12 @@ hw_ml/
 │   ├── preprocess.py             # 数据预处理模块
 │   ├── torch_reducers.py         # PyTorch GPU 加速降维实现
 │   ├── torch_classifiers.py      # PyTorch GPU 加速分类器
+│   ├── pipeline_utils.py         # 通用流水线工具（划分/归一化/计时）
+│   ├── model_selection.py        # 轻量网格搜索（sklearn/cuML）
+│   ├── reduction_metrics.py      # 降维评价指标
 │   ├── metrics.py                # 评估指标计算
 │   ├── plots.py                  # IEEE 风格可视化
-│   └── run_experiments_torch.py  # 主实验脚本
+│   └── run_experiments.py        # 主实验脚本
 ├── data/                          # 数据目录
 │   ├── raw/                      # 原始 CSV 文件
 │   └── processed/                # 实验结果（CSV）
@@ -84,7 +87,7 @@ mv Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv data/raw/
 **执行完整实验流程**:
 
 ```bash
-pixi run python code/run_experiments_torch.py
+pixi run python code/run_experiments.py
 ```
 
 **实验配置**:
@@ -249,7 +252,7 @@ A: 可以。代码会自动检测并切换到 CPU 模式。但运行时间会显
 
 **Q3: 实验运行太慢怎么办？**
 
-A: 可以进一步减少训练集采样上限。修改 `code/run_experiments_torch.py` 中的采样逻辑，例如将 `10000` 调小为 `5000`：
+A: 可以进一步减少训练集采样上限。修改 `code/run_experiments.py` 中的采样逻辑，例如将 `10000` 调小为 `5000`：
 ```python
 if len(X_train) > 5000:  # 原值为 10000，可按需调整
 ```

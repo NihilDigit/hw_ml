@@ -9,17 +9,38 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import torch
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 
 from config import DATA_PROCESSED, FIGURES_DIR, FEATURES, LABEL_COL, RANDOM_SEED
 from plots import setup_ieee_style
+from preprocess import load_and_clean
+from pipeline_utils import fit_minmax_scaler, split_train_test, transform_with_scaler
 from torch_reducers import TorchLDA, TorchPCA
+
+
+def _abbrev_label(label: str) -> str:
+    mapping = {
+        "Benign": "Benign",
+        "Bot": "Bot",
+        "Brute Force -Web": "BF-Web",
+        "Brute Force -XSS": "BF-XSS",
+        "DDOS attack-HOIC": "DDoS-HOIC",
+        "DDOS attack-LOIC-UDP": "DDoS-UDP",
+        "DDoS attacks-LOIC-HTTP": "DDoS-HTTP",
+        "DoS attacks-GoldenEye": "DoS-GE",
+        "DoS attacks-Hulk": "DoS-Hulk",
+        "DoS attacks-SlowHTTPTest": "DoS-SlowHTTP",
+        "DoS attacks-Slowloris": "DoS-Slowloris",
+        "FTP-BruteForce": "FTP-BF",
+        "Infilteration": "Infil",
+        "SQL Injection": "SQLi",
+        "SSH-Bruteforce": "SSH-BF",
+    }
+    short = mapping.get(label, label)
+    return short if len(short) <= 14 else short[:13] + "…"
 
 
 def plot_confusion_matrix(cm: np.ndarray, labels: list[str], out_path: Path) -> None:
@@ -27,12 +48,17 @@ def plot_confusion_matrix(cm: np.ndarray, labels: list[str], out_path: Path) -> 
 
     setup_ieee_style()
 
-    fig, ax = plt.subplots(figsize=(4.2, 3.2), dpi=150)
+    display_labels = [_abbrev_label(l) for l in labels]
+    fig, ax = plt.subplots(figsize=(7.2, 4.8), dpi=180)
     im = ax.imshow(cm, cmap="Blues")
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
-    ax.set_xticks(range(len(labels)), labels=labels, rotation=20, ha="right")
-    ax.set_yticks(range(len(labels)), labels=labels)
+    ax.set_xticks(range(len(display_labels)), labels=display_labels, rotation=60, ha="right")
+    ax.set_yticks(range(len(display_labels)), labels=display_labels)
+    ax.tick_params(axis="both", labelsize=7)
+    ax.minorticks_off()
+    ax.tick_params(top=False, right=False)
+    ax.set_aspect("equal")
     ax.set_xlabel("Predicted label")
     ax.set_ylabel("True label")
 
@@ -42,6 +68,8 @@ def plot_confusion_matrix(cm: np.ndarray, labels: list[str], out_path: Path) -> 
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):
             val = int(cm[i, j])
+            if val == 0:
+                continue
             ax.text(
                 j,
                 i,
@@ -53,7 +81,7 @@ def plot_confusion_matrix(cm: np.ndarray, labels: list[str], out_path: Path) -> 
             )
 
     fig.tight_layout()
-    fig.savefig(out_path)
+    fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -62,19 +90,18 @@ def main() -> None:
 
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-    csv_path = DATA_PROCESSED / "ids2018_subset_10k.csv"
-    df = pd.read_csv(csv_path)
+    csv_path = DATA_PROCESSED / "ids2018_subset_3k.csv"
+    df = load_and_clean(str(csv_path))
 
     X = df[FEATURES].values
     y = df[LABEL_COL].values
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=RANDOM_SEED, stratify=y
-    )
+    split = split_train_test(X, y, test_size=0.2, seed=RANDOM_SEED)
+    X_train, X_test, y_train, y_test = split.X_train, split.X_test, split.y_train, split.y_test
 
-    scaler = MinMaxScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    scaler = fit_minmax_scaler(X_train)
+    X_train = transform_with_scaler(scaler, X_train)
+    X_test = transform_with_scaler(scaler, X_test)
 
     labels = ["Benign"] + [l for l in np.unique(y_test) if l != "Benign"]
 

@@ -221,7 +221,7 @@ pixi add cuml
 
 ### 1. 添加数据采样
 ```python
-# run_experiments_torch.py, line ~85
+# run_experiments.py, line ~85
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=RANDOM_SEED, stratify=y
 )
@@ -238,7 +238,7 @@ if len(X_train) > 50000:
 
 ### 2. 简化网格搜索
 ```python
-# run_experiments_torch.py, line ~94-115
+# run_experiments.py, line ~94-115
 classifiers = {
     "SVM": {
         "type": "sklearn",
@@ -270,7 +270,7 @@ classifiers = {
 
 ### 3. 减少实验组合
 ```python
-# run_experiments_torch.py, line ~130
+# run_experiments.py, line ~130
 reducers = ["PCA", "LDA"]  # 去掉 t-SNE
 dims = [10, 20]            # 去掉 15
 ```

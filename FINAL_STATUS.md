@@ -24,7 +24,7 @@
 1. **完整代码实现** ✅
    - `code/torch_reducers.py` - GPU 加速降维
    - `code/torch_classifiers.py` - GPU 加速分类器
-   - `code/run_experiments_torch.py` - 实验流程
+   - `code/run_experiments.py` - 实验流程
    - 所有辅助模块
 
 2. **文档框架**（95%完成）✅
@@ -51,7 +51,7 @@
 
 ```bash
 # 查看实验是否还在运行
-ps aux | grep run_experiments_torch.py
+ps aux | grep run_experiments.py
 
 # 查看生成的文件
 ls data/processed/
@@ -102,13 +102,13 @@ git commit -m "Complete final deliverables"
 
 ```bash
 # 1. 中止当前实验
-pkill -f run_experiments_torch.py
+pkill -f run_experiments.py
 
 # 2. 备份当前代码
-cp code/run_experiments_torch.py code/run_experiments_torch.py.backup
+cp code/run_experiments.py code/run_experiments.py.backup
 
 # 3. 修改实验配置（减少组合 + 简化 SVM）
-# 编辑 code/run_experiments_torch.py:
+# 编辑 code/run_experiments.py:
 
 # 第 123-130 行改为：
 experiments = [
@@ -128,7 +128,7 @@ experiments = [
 },
 
 # 4. 重新运行（预计30-60分钟）
-pixi run python code/run_experiments_torch.py 2>&1 | tee experiment_optimized.txt
+pixi run python code/run_experiments.py 2>&1 | tee experiment_optimized.txt
 
 # 5. 等待完成后，按情况1操作
 ```
@@ -156,8 +156,8 @@ pixi run python code/run_experiments_torch.py 2>&1 | tee experiment_optimized.tx
 3. **本文件** - 快速状况总结
 
 ### 代码
-- `code/run_experiments_torch.py` - 主实验脚本（可能需要优化）
-- `code/run_experiments_torch.py.backup` - 备份（如果你修改了代码）
+- `code/run_experiments.py` - 主实验脚本（可能需要优化）
+- `code/run_experiments.py.backup` - 备份（如果你修改了代码）
 - `fill_results.py` - 数据填充脚本
 
 ### 文档（待重命名）

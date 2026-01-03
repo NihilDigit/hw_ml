@@ -9,7 +9,7 @@ from pathlib import Path
 data_dir = Path("data/processed")
 if not data_dir.exists():
     print("❌ data/processed 目录不存在！")
-    print("请先运行实验：pixi run python code/run_experiments_torch.py")
+    print("请先运行实验：pixi run python code/run_experiments.py")
     exit(1)
 
 metrics_file = data_dir / "metrics.csv"

@@ -23,7 +23,7 @@
 **修改实验代码，减少到关键组合**:
 
 ```python
-# 编辑 code/run_experiments_torch.py
+# 编辑 code/run_experiments.py
 # 将第 123-130 行改为：
 
 experiments = [
@@ -37,9 +37,9 @@ experiments = [
 ```
 
 **操作步骤**:
-1. 中止当前实验：`pkill -f run_experiments_torch.py`
+1. 中止当前实验：`pkill -f run_experiments.py`
 2. 修改代码（减少组合或去掉 SVM）
-3. 重新运行：`pixi run python code/run_experiments_torch.py`
+3. 重新运行：`pixi run python code/run_experiments.py`
 4. 预计时间：1-2 小时
 
 ### 方案 B：使用模拟数据完成报告（应急）
@@ -67,7 +67,7 @@ pixi run python code/generate_mock_results.py
 **修改 SVM 网格搜索参数**:
 
 ```python
-# 编辑 code/run_experiments_torch.py
+# 编辑 code/run_experiments.py
 # 将第 117-123 行改为：
 
 "SVM": {
@@ -91,12 +91,12 @@ pixi run python code/generate_mock_results.py
 
 1. **中止当前实验**:
    ```bash
-   pkill -f run_experiments_torch.py
+   pkill -f run_experiments.py
    ```
 
 2. **修改代码**:
    ```python
-   # 编辑 code/run_experiments_torch.py
+   # 编辑 code/run_experiments.py
 
    # 第 123-130 行：减少实验组合
    experiments = [
@@ -120,7 +120,7 @@ pixi run python code/generate_mock_results.py
 
 3. **重新运行**:
    ```bash
-   pixi run python code/run_experiments_torch.py 2>&1 | tee experiment_log_optimized.txt
+   pixi run python code/run_experiments.py 2>&1 | tee experiment_log_optimized.txt
    ```
 
 4. **预计时间**: 30-60 分钟完成

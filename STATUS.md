@@ -15,7 +15,7 @@
 - ✅ 数据预处理优化 (`preprocess.py`)
   - 添加类型转换
   - 改进异常值处理
-- ✅ 实验流程优化 (`run_experiments_torch.py`)
+- ✅ 实验流程优化 (`run_experiments.py`)
   - 数据采样至 50,000 样本
   - 15 组实验设计（PCA 9组 + LDA 3组 + t-SNE 3组）
   - 降维结果缓存机制

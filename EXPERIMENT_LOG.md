@@ -111,7 +111,7 @@ scikit-learn 的 SVM 实现不支持 GPU，即使使用 `n_jobs=-1` 多核并行
 ### 代码模块
 - `code/torch_reducers.py` - PyTorch GPU 降维实现
 - `code/torch_classifiers.py` - PyTorch GPU 分类器实现
-- `code/run_experiments_torch.py` - 完整实验流程
+- `code/run_experiments.py` - 完整实验流程
 - `code/preprocess.py` - 数据预处理
 - `code/metrics.py` - 评估指标
 - `code/plots.py` - 可视化（IEEE 风格）

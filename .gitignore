@@ -6,6 +6,9 @@
 __pycache__/
 *.pyc
 
+# LibreOffice lock files
+.~lock.*#
+
 # Data directories
 data/
 
