@@ -76,7 +76,7 @@ mv Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv data/raw/
 **数据说明**:
 - 文件大小：约 103 MB (压缩后可能更小)
 - 样本数：约 33 万条流记录
-- 类别：Benign (正常流量) 和 DDoS (攻击流量)
+- 类别：Benign (正常流量) 和 Infilteration (攻击流量)
 - 特征数：80 列（本项目使用其中 30 个核心特征）
 
 ### 3. 运行实验
@@ -88,18 +88,18 @@ pixi run python code/run_experiments_torch.py
 ```
 
 **实验配置**:
-- 训练集采样：50,000 样本（从 262,544 样本中采样，保持类别平衡）
+- 训练集采样：10,000 样本（从 262,544 样本中随机采样，随机种子 42）
 - 测试集：65,637 样本（完整测试集，不采样）
 - 实验组合：15 组
   - PCA (10/15/20 维) × 3 分类器 = 9 组
-  - LDA (15 维) × 3 分类器 = 3 组
-  - t-SNE (15 维) × 3 分类器 = 3 组
+  - LDA (1 维，二分类上限) × 3 分类器 = 3 组
+  - t-SNE (2 维) × 3 分类器 = 3 组
 - 预计运行时间：45-90 分钟（取决于硬件配置）
 
 **输出文件**:
 - `data/processed/metrics.csv`: 完整实验指标
 - `data/processed/reduction_metrics.csv`: 降维效果评估
-- `data/processed/attack_metrics.csv`: DDoS 攻击检测指标
+- `data/processed/attack_metrics.csv`: Infilteration 攻击检测指标
 - `figures/*.png`: 降维可视化图表（5 张）
 
 **实时监控**:
@@ -164,7 +164,7 @@ tail -f experiment_log_final.txt
 5. **零值过滤**: 删除无效零流量记录
 6. **归一化**: Min-Max 归一化至 [0, 1] 区间
 7. **数据划分**: 80/20 训练/测试集划分，分层采样保持类别平衡
-8. **训练集采样**: 采样至 50,000 样本加速实验
+8. **训练集采样**: 采样至 10,000 样本加速实验
 
 ### 降维方法
 
@@ -186,12 +186,12 @@ tail -f experiment_log_final.txt
 ### 分类器配置
 
 **SVM (支持向量机)**:
-- 网格搜索参数：`C ∈ {0.1, 1, 10}`, `kernel ∈ {linear, rbf}`, `gamma ∈ {scale, auto}`
+- 网格搜索参数：`C ∈ {1, 10}`, `kernel = rbf`, `gamma = scale`
 - 3 折交叉验证
 - F1 宏平均评分
 
 **RandomForest (随机森林)**:
-- 网格搜索参数：`n_estimators ∈ {200, 500}`, `max_depth ∈ {None, 10, 20}`, `min_samples_split ∈ {2, 5}`
+- 网格搜索参数：`n_estimators = 200`, `max_depth ∈ {None, 20}`, `min_samples_split = 2`
 - 3 折交叉验证
 - F1 宏平均评分
 
@@ -249,9 +249,9 @@ A: 可以。代码会自动检测并切换到 CPU 模式。但运行时间会显
 
 **Q3: 实验运行太慢怎么办？**
 
-A: 可以进一步减少训练集样本数。修改 `run_experiments_torch.py` 第 106 行：
+A: 可以进一步减少训练集采样上限。修改 `code/run_experiments_torch.py` 中的采样逻辑，例如将 `10000` 调小为 `5000`：
 ```python
-if len(X_train) > 20000:  # 从 50000 改为 20000
+if len(X_train) > 5000:  # 原值为 10000，可按需调整
 ```
 
 **Q4: 内存不足怎么办？**
@@ -283,8 +283,8 @@ nihildigit <nihildigit@outlook.com>
 ---
 
 **注意事项**:
-1. t-SNE 降维对整体数据进行映射后再划分训练/测试集，存在轻微信息泄漏风险。若需严格避免，可将 t-SNE 仅用于可视化。
-2. 训练集采样至 50,000 样本，结果精度略有下降但可接受。若需最高精度，请使用完整训练集（修改代码去掉采样步骤）。
+1. t-SNE 降维通过将训练集与测试集拼接后拟合二维嵌入再切分，存在轻微信息泄漏风险；若需严格避免，建议将 t-SNE 仅用于可视化或改用可显式变换的降维方法。
+2. 训练集采样至 10,000 样本，结果精度略有下降但可接受。若需更高精度，可提高采样上限或使用完整训练集（修改代码去掉采样步骤）。
 3. 所有随机过程固定种子 42，确保可复现性。
 
 ## 实验结果摘要
