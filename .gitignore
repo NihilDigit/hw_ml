@@ -8,3 +8,6 @@ __pycache__/
 
 # Large raw datasets
 data/raw/*.csv
+
+# CSV outputs
+*.csv

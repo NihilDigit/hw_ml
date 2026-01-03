@@ -7,12 +7,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
+from sklearn.metrics import f1_score, precision_recall_fscore_support
+from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import precision_recall_fscore_support
-from sklearn.model_selection import GridSearchCV, train_test_split
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
+from sklearn.manifold import TSNE as SklearnTSNE
 
 from config import (
     DATA_PROCESSED,
@@ -27,6 +28,17 @@ from plots import plot_2d_scatter
 from preprocess import load_and_clean
 from torch_reducers import TorchPCA, TorchLDA, TorchTSNE
 from torch_classifiers import TorchLogisticRegression, grid_search_torch_lr
+
+try:
+    from cuml.manifold import TSNE as CuMLTSNE
+    from cuml.ensemble import RandomForestClassifier as CuMLRandomForestClassifier
+    from cuml.linear_model import LogisticRegression as CuMLLogisticRegression
+    from cuml.svm import SVC as CuMLSVC
+except Exception:
+    CuMLTSNE = None
+    CuMLRandomForestClassifier = None
+    CuMLLogisticRegression = None
+    CuMLSVC = None
 
 
 def class_separation_ratio(X, y):
@@ -64,17 +76,74 @@ def reducer_factory(name, n_components, n_classes, device="cuda"):
         n_comp = min(n_components, max(n_classes - 1, 1))
         return TorchLDA(n_components=n_comp, device=device)
     if name == "t-SNE":
-        # Use sklearn's CPU version to avoid GPU OOM
-        from sklearn.manifold import TSNE
-        return TSNE(
+        # Use sklearn t-SNE (CPU) - stable and sufficient for 3k samples
+        return SklearnTSNE(
             n_components=n_components,
             perplexity=30,
-            learning_rate='auto',
+            learning_rate="auto",
             max_iter=1000,
-            init='pca',
+            init="pca",
             random_state=RANDOM_SEED,
         )
     raise ValueError(f"Unknown reducer: {name}")
+
+
+def grid_search_cuml(model_cls, param_grid_list, X, y, cv=3, seed=RANDOM_SEED):
+    """Simple grid search for cuML models using macro F1."""
+    skf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=seed)
+    best_score = -1.0
+    best_params = None
+
+    for params in param_grid_list:
+        scores = []
+        for train_idx, val_idx in skf.split(X, y):
+            X_tr, X_val = X[train_idx], X[val_idx]
+            y_tr, y_val = y[train_idx], y[val_idx]
+
+            model = model_cls(**params)
+            model.fit(X_tr, y_tr)
+            y_pred = model.predict(X_val)
+            if hasattr(y_pred, "get"):
+                y_pred = y_pred.get()
+            score = f1_score(y_val, y_pred, average="macro", zero_division=0)
+            scores.append(score)
+
+        mean_score = float(np.mean(scores))
+        if mean_score > best_score:
+            best_score = mean_score
+            best_params = params
+
+    best_model = model_cls(**best_params)
+    best_model.fit(X, y)
+    return best_model, best_params, best_score
+
+
+def grid_search_sklearn(model_cls, param_grid_list, X, y, cv=3, seed=RANDOM_SEED):
+    """Simple grid search for sklearn models using macro F1."""
+    skf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=seed)
+    best_score = -1.0
+    best_params = None
+
+    for params in param_grid_list:
+        scores = []
+        for train_idx, val_idx in skf.split(X, y):
+            X_tr, X_val = X[train_idx], X[val_idx]
+            y_tr, y_val = y[train_idx], y[val_idx]
+
+            model = model_cls(**params)
+            model.fit(X_tr, y_tr)
+            y_pred = model.predict(X_val)
+            score = f1_score(y_val, y_pred, average="macro", zero_division=0)
+            scores.append(score)
+
+        mean_score = float(np.mean(scores))
+        if mean_score > best_score:
+            best_score = mean_score
+            best_params = params
+
+    best_model = model_cls(**best_params)
+    best_model.fit(X, y)
+    return best_model, best_params, best_score
 
 
 def main():
@@ -89,7 +158,8 @@ def main():
     DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
 
     # Load and preprocess data
-    csv_path = DATA_RAW / "Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv"
+    # Use the stratified 10k subset for multi-class experiments
+    csv_path = DATA_PROCESSED / "ids2018_subset_3k.csv"
     print(f"Loading data from {csv_path}...")
     df = load_and_clean(str(csv_path))
     print(f"Loaded {len(df)} samples with {len(df[LABEL_COL].unique())} classes")
@@ -104,58 +174,54 @@ def main():
     print(f"Training samples: {len(X_train)}, Test samples: {len(X_test)}")
 
     # Sample training set to 10k for faster experimentation and t-SNE feasibility
-    if len(X_train) > 10000:
-        print(f"Sampling training set from {len(X_train)} to 10000...")
-        sample_idx = np.random.RandomState(RANDOM_SEED).choice(
-            len(X_train), size=10000, replace=False
-        )
-        X_train = X_train[sample_idx]
-        y_train = y_train[sample_idx]
-        print(f"Training samples after sampling: {len(X_train)}")
-
     # Normalization
     scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    # Experiment design: 15 combinations (5 reducers × 3 classifiers)
-    # Three types of dimensionality reduction methods: PCA, LDA, t-SNE
+    # Experiment design: 18 combinations (6 reducers × 3 classifiers)
+    # Dimensionality reduction methods: PCA, LDA (t-SNE moved to standalone viz)
     experiments = [
         ("PCA", 10),      # PCA-10D
         ("PCA", 15),      # PCA-15D
         ("PCA", 20),      # PCA-20D
-        ("LDA", 1),       # LDA-1D (max for binary classification)
-        ("t-SNE", 2),     # t-SNE-2D (for visualization and classification)
+        ("LDA", 6),       # LDA-6D (<= n_classes-1)
+        ("LDA", 10),      # LDA-10D (<= n_classes-1)
+        ("LDA", 14),      # LDA-14D (max for 15 classes)
     ]
 
-    # Classifier configurations
-    # Note: SVM and RandomForest use scikit-learn (CPU multi-core)
-    # LogisticRegression uses PyTorch (GPU)
+    if CuMLRandomForestClassifier is None or CuMLLogisticRegression is None:
+        raise RuntimeError("cuML is required for GPU classifiers but could not be imported.")
+
+    # Classifier configurations (GPU via cuML)
+    # Note: cuML SVC has a known bug with multi-class classification, so we use sklearn SVC
     classifiers = {
         "SVM": {
             "type": "sklearn",
-            "model": SVC(),
-            "param_grid": {
-                "C": [1, 10],           # 2 values (optimized)
-                "kernel": ["rbf"],      # RBF only
-                "gamma": ["scale"],     # scale only
-            },
+            "model_cls": SVC,
+            "param_grid": [
+                {"C": 1, "kernel": "rbf", "gamma": "scale"},
+                {"C": 10, "kernel": "rbf", "gamma": "scale"},
+                {"C": 1, "kernel": "linear"},
+                {"C": 10, "kernel": "linear"},
+            ],
         },
         "RandomForest": {
-            "type": "sklearn",
-            "model": RandomForestClassifier(random_state=RANDOM_SEED),
-            "param_grid": {
-                "n_estimators": [200],      # 200 trees
-                "max_depth": [None, 20],    # 2 values
-                "min_samples_split": [2],   # default
-            },
+            "type": "cuml",
+            "model_cls": CuMLRandomForestClassifier,
+            "param_grid": [
+                {"n_estimators": 200, "max_depth": 10, "n_streams": 1, "random_state": RANDOM_SEED},
+                {"n_estimators": 200, "max_depth": 20, "n_streams": 1, "random_state": RANDOM_SEED},
+            ],
         },
         "LogisticRegression": {
-            "type": "torch",
-            "param_grid": {
-                "C": [0.1, 1, 10],
-                "max_iter": [1000],
-            },
+            "type": "cuml",
+            "model_cls": CuMLLogisticRegression,
+            "param_grid": [
+                {"C": 0.1, "max_iter": 1000},
+                {"C": 1.0, "max_iter": 1000},
+                {"C": 10.0, "max_iter": 1000},
+            ],
         },
     }
 
@@ -188,8 +254,16 @@ def main():
                 X_full = np.vstack([X_train, X_test])
                 y_full = np.concatenate([y_train, y_test])
                 X_red = reducer.fit_transform(X_full)
+                # cuML t-SNE returns cupy array, convert to numpy
+                if hasattr(X_red, "get"):
+                    X_red = X_red.get()
                 X_train_red = X_red[: len(X_train)]
                 X_test_red = X_red[len(X_train) :]
+                # Clean up GPU memory after t-SNE
+                del reducer
+                import gc
+                gc.collect()
+                torch.cuda.empty_cache()
             else:
                 X_train_red = reducer.fit_transform(X_train, y_train)
                 X_test_red = reducer.transform(X_test)
@@ -244,35 +318,48 @@ def main():
 
             start_train = time.time()
 
-            if clf_config["type"] == "sklearn":
-                # Scikit-learn classifier with GridSearchCV
-                search = GridSearchCV(
-                    clf_config["model"],
+            if clf_config["type"] == "cuml":
+                model, best_params, _ = grid_search_cuml(
+                    clf_config["model_cls"],
                     clf_config["param_grid"],
-                    cv=3,
-                    scoring="f1_macro",
-                    n_jobs=-1,
-                    refit=True,
-                )
-                search.fit(X_train_red, y_train)
-                best_params = search.best_params_
-                model = search.best_estimator_
-
-            elif clf_config["type"] == "torch":
-                # PyTorch classifier with custom grid search
-                model, best_params = grid_search_torch_lr(
                     X_train_red,
                     y_train,
-                    clf_config["param_grid"],
                     cv=3,
-                    device=device,
                 )
+            elif clf_config["type"] == "sklearn":
+                model, best_params, _ = grid_search_sklearn(
+                    clf_config["model_cls"],
+                    clf_config["param_grid"],
+                    X_train_red,
+                    y_train,
+                    cv=3,
+                )
+            elif clf_config["type"] == "cuml_or_sklearn":
+                try:
+                    model, best_params, _ = grid_search_cuml(
+                        clf_config["model_cls"],
+                        clf_config["param_grid"],
+                        X_train_red,
+                        y_train,
+                        cv=3,
+                    )
+                except Exception as err:
+                    print(f"cuML {clf_name} failed ({err}); falling back to sklearn...")
+                    model, best_params, _ = grid_search_sklearn(
+                        clf_config["fallback_cls"],
+                        clf_config["fallback_param_grid"],
+                        X_train_red,
+                        y_train,
+                        cv=3,
+                    )
 
             train_time = time.time() - start_train
 
             # Prediction
             start_pred = time.time()
             y_pred = model.predict(X_test_red)
+            if hasattr(y_pred, "get"):
+                y_pred = y_pred.get()
             pred_time = time.time() - start_pred
 
             # Metrics
@@ -333,45 +420,46 @@ def main():
 
     clf_config = classifiers[best_row["Classifier"]]
 
-    if clf_config["type"] == "sklearn":
-        search = GridSearchCV(
-            clf_config["model"],
-            clf_config["param_grid"],
-            cv=3,
-            scoring="f1_macro",
-            n_jobs=-1,
-            refit=True,
+    if clf_config["type"] == "cuml":
+        model, _, _ = grid_search_cuml(
+            clf_config["model_cls"], clf_config["param_grid"], X_train_red, y_train, cv=3
         )
-        search.fit(X_train_red, y_train)
-        model = search.best_estimator_
-    else:
-        model, _ = grid_search_torch_lr(
-            X_train_red, y_train, clf_config["param_grid"], cv=3, device=device
+    elif clf_config["type"] == "sklearn":
+        model, _, _ = grid_search_sklearn(
+            clf_config["model_cls"], clf_config["param_grid"], X_train_red, y_train, cv=3
         )
+    elif clf_config["type"] == "cuml_or_sklearn":
+        try:
+            model, _, _ = grid_search_cuml(
+                clf_config["model_cls"], clf_config["param_grid"], X_train_red, y_train, cv=3
+            )
+        except Exception:
+            model, _, _ = grid_search_sklearn(
+                clf_config["fallback_cls"], clf_config["fallback_param_grid"], X_train_red, y_train, cv=3
+            )
 
     y_pred = model.predict(X_test_red)
+    if hasattr(y_pred, "get"):
+        y_pred = y_pred.get()
 
-    # Per-attack metrics
-    # Auto-detect attack label (non-Benign class)
+    # Per-attack metrics for all attack labels (exclude Benign)
     labels = np.unique(y_test)
     attack_labels = [l for l in labels if l != "Benign"]
 
-    if len(attack_labels) > 0:
-        attack_label = attack_labels[0]  # Use first attack type found
+    if attack_labels:
         pr, rc, f1, _ = precision_recall_fscore_support(
-            y_test, y_pred, labels=[attack_label], average=None
+            y_test, y_pred, labels=attack_labels, average=None, zero_division=0
         )
         attack_df = pd.DataFrame(
             {
-                "Attack_type": [attack_label],
-                "Precision": [float(pr[0])],
-                "Recall": [float(rc[0])],
-                "F1": [float(f1[0])],
+                "Attack_type": attack_labels,
+                "Precision": pr.astype(float),
+                "Recall": rc.astype(float),
+                "F1": f1.astype(float),
             }
-        )
+        ).sort_values("Attack_type")
         attack_df.to_csv(DATA_PROCESSED / "attack_metrics.csv", index=False)
         print(f"\nAttack-specific metrics saved to {DATA_PROCESSED / 'attack_metrics.csv'}")
-        print(f"  {attack_label} - Precision: {pr[0]:.4f}, Recall: {rc[0]:.4f}, F1: {f1[0]:.4f}")
 
     print(f"\n{'='*60}")
     print("All experiments completed!")

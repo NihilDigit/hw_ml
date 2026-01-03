@@ -17,8 +17,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 
-from config import DATA_RAW, FIGURES_DIR, FEATURES, LABEL_COL, RANDOM_SEED
-from preprocess import load_and_clean
+from config import DATA_PROCESSED, FIGURES_DIR, FEATURES, LABEL_COL, RANDOM_SEED
 from plots import setup_ieee_style
 from torch_reducers import TorchLDA, TorchPCA
 
@@ -63,8 +62,8 @@ def main() -> None:
 
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-    csv_path = DATA_RAW / "Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv"
-    df = load_and_clean(str(csv_path))
+    csv_path = DATA_PROCESSED / "ids2018_subset_10k.csv"
+    df = pd.read_csv(csv_path)
 
     X = df[FEATURES].values
     y = df[LABEL_COL].values
@@ -72,12 +71,6 @@ def main() -> None:
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=RANDOM_SEED, stratify=y
     )
-
-    if len(X_train) > 10000:
-        rng = np.random.RandomState(RANDOM_SEED)
-        sample_idx = rng.choice(len(X_train), size=10000, replace=False)
-        X_train = X_train[sample_idx]
-        y_train = y_train[sample_idx]
 
     scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
@@ -106,7 +99,7 @@ def main() -> None:
 
     # Additional comparisons (cheap to compute) for analysis:
     #   - PCA-10D + SVM (RBF)
-    #   - LDA-1D + RandomForest
+    #   - LDA-10D + RandomForest (capped at n_classes - 1)
     svm = SVC(C=10, kernel="rbf", gamma="scale", random_state=RANDOM_SEED)
     svm.fit(X_train_red, y_train)
     y_pred_svm = svm.predict(X_test_red)
@@ -114,7 +107,7 @@ def main() -> None:
     out_path_svm = FIGURES_DIR / "ConfusionMatrix_PCA10_SVM.png"
     plot_confusion_matrix(cm_svm, labels, out_path_svm)
 
-    lda = TorchLDA(n_components=1, device=device)
+    lda = TorchLDA(n_components=10, device=device)
     X_train_lda = lda.fit_transform(X_train, y_train)
     X_test_lda = lda.transform(X_test)
     rf_lda = RandomForestClassifier(
@@ -127,7 +120,7 @@ def main() -> None:
     rf_lda.fit(X_train_lda, y_train)
     y_pred_rf_lda = rf_lda.predict(X_test_lda)
     cm_rf_lda = confusion_matrix(y_test, y_pred_rf_lda, labels=labels)
-    out_path_rf_lda = FIGURES_DIR / "ConfusionMatrix_LDA1_RandomForest.png"
+    out_path_rf_lda = FIGURES_DIR / "ConfusionMatrix_LDA10_RandomForest.png"
     plot_confusion_matrix(cm_rf_lda, labels, out_path_rf_lda)
 
     print(
