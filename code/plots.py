@@ -1,16 +1,28 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import pandas as pd
 
 
 def setup_ieee_style():
+    # Ensure Matplotlib can write its cache/config in sandboxed environments.
+    os.environ.setdefault(
+        "MPLCONFIGDIR", str((Path(__file__).resolve().parents[1] / ".mplconfig").resolve())
+    )
+
     # SciencePlots registers styles at import time.
     try:
         import scienceplots  # noqa: F401
     except Exception as exc:
         raise ImportError("SciencePlots is required to use the 'science' and 'ieee' styles.") from exc
     plt.style.use(["science", "ieee"])
+    # Avoid requiring a LaTeX installation (and TeX cache writes) for figure rendering.
+    plt.rcParams.update({"text.usetex": False})
+    # Prefer fonts that exist in minimal environments while keeping an IEEE-like serif look.
+    plt.rcParams.update({"font.family": "serif", "font.serif": ["DejaVu Serif", "Times"]})
 
 
 def plot_2d_scatter(df_2d: pd.DataFrame, label_col: str, out_path):
