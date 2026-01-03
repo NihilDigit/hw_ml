@@ -7,7 +7,6 @@
 ## 项目结构
 
 ```
-hw_ml/
 ├── code/                          # 代码模块
 │   ├── config.py                 # 配置文件（特征列表、路径等）
 │   ├── preprocess.py             # 数据预处理模块
@@ -18,10 +17,13 @@ hw_ml/
 │   ├── reduction_metrics.py      # 降维评价指标
 │   ├── metrics.py                # 评估指标计算
 │   ├── plots.py                  # IEEE 风格可视化
-│   └── run_experiments.py        # 主实验脚本
+│   ├── run_experiments.py        # 主实验脚本
+│   └── export_model.py           # 模型导出脚本（用于 Web 演示）
 ├── data/                          # 数据目录
 │   ├── raw/                      # 原始 CSV 文件
-│   └── processed/                # 实验结果（CSV）
+│   ├── processed/                # 实验结果（CSV）
+│   └── models/                   # 导出的模型资产 (.joblib, .pt)
+├── app.py                         # Gradio Web 实时监控中心
 ├── figures/                       # 可视化图表输出
 ├── report.md                      # 完整实践报告（10000字）
 ├── results.md                     # 实验结果汇总表
@@ -35,17 +37,7 @@ hw_ml/
 
 ### 1. 环境准备
 
-本项目使用 [pixi](https://pixi.sh/) 进行环境管理，确保 Python 3.11 及所有依赖的版本一致性。
-
-**前置要求**:
-- Linux 系统（推荐）
-- NVIDIA GPU（支持 CUDA 12.9+，可选）
-- pixi 包管理器
-
-**安装 pixi**（如未安装）:
-```bash
-curl -fsSL https://pixi.sh/install.sh | bash
-```
+本项目使用 [pixi](https://pixi.sh/) 进行环境管理。
 
 **安装项目依赖**:
 ```bash
@@ -53,74 +45,36 @@ cd hw_ml
 pixi install
 ```
 
-这将自动安装以下依赖：
-- Python 3.11
-- PyTorch 2.9 (GPU 版本)
-- scikit-learn, pandas, numpy
-- matplotlib, scienceplots
-- tqdm（进度条）
+### 2. 启动 Web 实时监控中心 (推荐演示方式)
 
-### 2. 数据准备
+系统提供了一个基于 Gradio 的图形化监控台，支持实时流式推理展示。
 
-**下载数据集**:
-
-访问 [CSE-CIC-IDS2018 数据集页面](https://www.unb.ca/cic/datasets/ids-2018.html) 或 [AWS Open Data](https://registry.opendata.aws/cse-cic-ids2018/)，下载以下文件：
-
-- `Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv`
-
-将文件放置于 `data/raw/` 目录：
-
+**第一步：导出模型** (已预置则可跳过)
 ```bash
-mkdir -p data/raw
-# 将下载的 CSV 文件移动到 data/raw/
-mv Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv data/raw/
+pixi run export
 ```
 
-**数据说明**:
-- 文件大小：约 103 MB (压缩后可能更小)
-- 样本数：约 33 万条流记录
-- 类别：Benign (正常流量) 和 Infilteration (攻击流量)
-- 特征数：80 列（本项目使用其中 30 个核心特征）
-
-### 3. 运行实验
-
-**执行完整实验流程**:
-
+**第二步：启动监控台**
 ```bash
-pixi run python code/run_experiments.py
+pixi run start
+```
+访问 `http://127.0.0.1:7860` 即可启动实时流量分析演示。
+
+### 3. 运行完整实验流程
+
+若需重新跑一遍 18 组组合实验：
+```bash
+pixi run train
 ```
 
-**实验配置**:
-- 训练集采样：10,000 样本（从 262,544 样本中随机采样，随机种子 42）
-- 测试集：65,637 样本（完整测试集，不采样）
-- 实验组合：15 组
-  - PCA (10/15/20 维) × 3 分类器 = 9 组
-  - LDA (1 维，二分类上限) × 3 分类器 = 3 组
-  - t-SNE (2 维) × 3 分类器 = 3 组
-- 预计运行时间：45-90 分钟（取决于硬件配置）
+## 功能特性：Web 实时监控中心
 
-**输出文件**:
-- `data/processed/metrics.csv`: 完整实验指标
-- `data/processed/reduction_metrics.csv`: 降维效果评估
-- `data/processed/attack_metrics.csv`: Infilteration 攻击检测指标
-- `figures/*.png`: 降维可视化图表（5 张）
+为满足中小型企业对安全防护“直观、实时、易操作”的需求，系统包装了一个 Web 控制中心：
 
-**实时监控**:
-
-可以通过查看日志文件监控实验进度：
-
-```bash
-tail -f experiment_log_final.txt
-```
-
-### 4. 查看结果
-
-实验完成后，查看以下文件：
-
-- **`results.md`**: 实验结果汇总表（包含所有指标）
-- **`report.md`**: 完整学术报告（约 10000 字）
-- **`rules.md`**: 入侵检测规则提取与安全分析
-- **`figures/`**: 降维可视化图表
+- **数字化驾驶舱**：实时显示当前时延（ms）、平均时延、系统准确率、处理流量及拦截威胁总数。
+- **流式监控日志**：动态展示捕获的流量样本，实时对比“真实标签”与“预测结果”，并标注检测状态（正常/攻击）。
+- **威胁分布统计**：自动按攻击类型对捕获到的威胁进行排序统计，辅助运维决策。
+- **高性能推理**：集成 LDA-10D 降维与随机森林分类器，实现单样本亚毫秒级（<1ms）极速响应。
 
 ## 技术特性
 
